@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <script>
+        if (localStorage.getItem('isAuth') !== 'true') {
+            window.location.href = '../../auth/login.html';
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Seni Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --accent: #2563eb;
+            --meta-bg: #f1f5f9;
+            --border: #e2e8f0;
+        }
+
+        body.theme-night {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f1f5f9;
+            --accent: #3b82f6;
+            --meta-bg: #334155;
+            --border: #475569;
+        }
+
+        body.theme-sporty {
+            --bg-body: #e2e8f0;
+            --bg-card: #ffffff;
+            --text-main: #000000;
+            --accent: #0000ff;
+            --meta-bg: #f8fafc;
+            --border: #cbd5e1;
+        }
+
+        body.theme-olympic {
+            --bg-body: #1a1a1a;
+            --bg-card: #2a2a2a;
+            --text-main: #d4af37;
+            --accent: #0085c7;
+            --meta-bg: #333333;
+            --border: #444444;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sb-table {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            position: relative;
+        }
+
+        .row-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            background: var(--meta-bg);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .row-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem;
+            flex: 1;
+        }
+
+        .athlete-name { font-size: 4.5rem; font-weight: 800; line-height: 1; }
+        .athlete-team { font-size: 2rem; color: var(--accent); font-weight: 600; }
+        .timer-box { font-size: 8rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+        #jury-row {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1.5rem 2rem;
+            background: var(--bg-body);
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .juri-container { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 120px; max-width: 250px;}
+        .juri-label-box { background: var(--meta-bg); padding: 0.25rem; border-radius: 4px; text-align: center; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; opacity: 0.8; }
+        .juri-score-box { background: var(--bg-card); border: 2px solid var(--border); padding: 0.75rem; border-radius: 8px; text-align: center; font-size: 2.8rem; font-weight: 800; transition: all 0.3s ease; }
+        .is-ready .juri-score-box { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
+
+        .total-score-badge { position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%); background: var(--text-main); color: var(--bg-card); padding: 1rem 3rem; border-radius: 12px; text-align: center; z-index: 10; }
+        .hide-element { display: none !important; }
+
+        /* STATS TABLE STYLES */
+        .stats-table { border-collapse: collapse; text-align: center; background: var(--bg-card); color: var(--text-main); width: 380px; }
+        .stats-table th { background: var(--accent); color: white; border: 1px solid var(--accent); padding: 6px; text-transform: uppercase; font-weight: 900; font-size: 13px; }
+        .stats-table td { border: 1px solid var(--border); padding: 8px; font-weight: 900; font-size: 1.5rem; }
+        .stats-table .sd-header { background: var(--accent); color: white; border: 1px solid var(--accent); font-size: 10px; padding: 4px; text-transform: uppercase; font-weight: 900; }
+        .stats-table .sd-val { color: var(--accent); font-weight: 900; font-style: italic; }
+
+        /* MODAL RESULT STYLES */
+        #result-modal { position: fixed; inset: 0; z-index: 200; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; padding: 2rem; }
+        #result-modal.active { display: flex; }
+        #pool-result-modal.active { display: flex !important; }
+        .animate-winner { animation: winner-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes winner-pop { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .glow-blue { box-shadow: 0 0 50px rgba(37, 99, 235, 0.5); }
+        .glow-red { box-shadow: 0 0 50px rgba(220, 38, 38, 0.5); }
+        .tie-breaker-active { background-color: #fefce8 !important; color: #854d0e !important; }
+        .shimmer-effect { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 2s infinite; }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    </style>
+</head>
+<body>
+
+    <div class="sb-table">
+        <div class="row-meta">
+            <div id="display-pool">POOL -</div>
+            <div class="text-center">
+                <div id="display-partai" class="text-sm opacity-70">PARTAI -</div>
+                <div id="display-babak" class="text-2xl">PENYISIHAN</div>
+            </div>
+            <div id="display-tipe" class="text-right opacity-60">TUNGGAL</div>
+        </div>
+
+        <div class="row-main gap-8">
+            <div class="flex-1">
+                <div id="display-team" class="athlete-team">KONTINGEN ---</div>
+                <h1 id="display-name" class="athlete-name">---</h1>
+            </div>
+
+            <div id="stats-table-container" class="shadow-xl rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 hide-element">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Median</th>
+                            <th>Hukuman</th>
+                            <th id="th-stat-time">Waktu</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td id="stat-median">0.000</td>
+                            <td id="stat-penalty" style="color: #ef4444;">0.00</td>
+                            <td id="stat-time">00:00</td>
+                            <td id="stat-total" style="color: var(--accent);">0.000</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" id="sd-colspan1" class="sd-header">Standard Deviation</td> 
+                        </tr>
+                        <tr>
+                            <td colspan="4" id="sd-colspan2" class="sd-val text-xl py-1">0.0000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="final-badge" class="total-score-badge hide-element">
+                <span class="text-xs uppercase font-bold opacity-70">Final Score</span>
+                <div id="final-score" class="text-7xl font-black">0.00</div>
+            </div>
+            <div id="timer" class="timer-box flex-shrink-0">03:00</div>
+        </div>
+        <div id="jury-row"></div>
+    </div>
+
+    <div id="result-modal">
+        <button onclick="document.getElementById('result-modal').classList.remove('active')" class="absolute top-6 right-6 w-12 h-12 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 shadow-lg transition-all z-50 cursor-pointer border border-slate-100">
+            <i class="fas fa-times text-2xl"></i>
+        </button>
+        <div class="w-full max-w-2xl flex flex-col items-center">
+            <div id="winner-banner" class="mb-8 p-8 rounded-3xl text-center uppercase font-black italic tracking-tighter text-5xl border-8 relative overflow-hidden w-full bg-white shadow-2xl">
+                <div class="relative z-10">
+                    <i class="fas fa-trophy mr-4"></i>
+                    WINNER: <span id="winner-name">---</span>
+                </div>
+                <div class="shimmer-effect"></div>
+            </div>
+
+            <table class="w-full bg-white rounded-3xl overflow-hidden shadow-2xl text-slate-900">
+                <thead>
+                    <tr class="bg-slate-100 text-[12px] uppercase font-black text-slate-500">
+                        <th class="p-4 text-left pl-8 border-b">Detail Point</th>
+                        <th class="p-4 border-b bg-blue-600 text-white">Biru</th>
+                        <th class="p-4 border-b bg-red-600 text-white">Merah</th>
+                    </tr>
+                </thead>
+                <tbody class="text-2xl font-bold">
+                    <tr>
+                        <td class="p-4 text-left pl-8 text-sm text-slate-400 border-b">Median Juri</td>
+                        <td id="pop-median-biru" class="p-4 text-center text-blue-600 border-b">0.00</td>
+                        <td id="pop-median-merah" class="p-4 text-center text-red-600 border-b">0.00</td>
+                    </tr>
+                    <tr id="versus-modal-row-waktu">
+                        <td class="p-4 text-left pl-8 text-sm text-slate-400 border-b">Waktu</td>
+                        <td id="pop-time-biru" class="p-4 text-center text-slate-600 border-b text-lg">00:00</td>
+                        <td id="pop-time-merah" class="p-4 text-center text-slate-600 border-b text-lg">00:00</td>
+                    </tr>
+                    <tr>
+                        <td class="p-4 text-left pl-8 text-sm text-red-400 border-b">Hukuman</td>
+                        <td id="pop-pen-biru" class="p-4 text-center text-red-500 border-b">0.00</td>
+                        <td id="pop-pen-merah" class="p-4 text-center text-red-500 border-b">0.00</td>
+                    </tr>
+                    <tr class="bg-slate-50">
+                        <td class="p-6 text-left pl-8 italic uppercase text-slate-900 border-b">Total Score</td>
+                        <td id="pop-total-biru" class="p-6 text-center text-blue-700 text-5xl font-black border-b">0.00</td>
+                        <td id="pop-total-merah" class="p-6 text-center text-red-700 text-5xl font-black border-b">0.00</td>
+                    </tr>
+                    <tr id="row-sd" class="text-sm text-slate-400">
+                        <td class="p-2 text-left pl-8 uppercase border-b">Std. Deviasi</td>
+                        <td id="pop-sd-biru" class="p-2 text-center border-b">0.0000</td>
+                        <td id="pop-sd-merah" class="p-2 text-center border-b">0.0000</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <!-- POOL RESULT MODAL (fullscreen, style mirip detail pertandingan) -->
+    <div id="pool-result-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(15,23,42,0.97);backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:2rem;overflow-y:auto;">
+        <button onclick="document.getElementById('pool-result-modal').classList.remove('active')" class="absolute top-6 right-6 w-12 h-12 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 shadow-lg transition-all z-50 cursor-pointer border border-slate-100">
+            <i class="fas fa-times text-2xl"></i>
+        </button>
+        <div style="width:100%;max-width:820px;margin:auto;">
+
+            <!-- Winner Banner mirip detailpertandinganjrs -->
+            <div id="pool-winner-banner" style="margin-bottom:1.5rem;padding:1.5rem 2rem;border-radius:1.5rem;text-align:center;border:4px solid #1d4ed8;background:#ffffff;color:#1d4ed8;font-size:2.5rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.02em;position:relative;overflow:hidden;box-shadow:0 0 40px rgba(29,78,216,0.4);">
+                <div style="position:relative;z-index:1;">
+                    <i class="fas fa-trophy" style="margin-right:0.75rem;"></i>
+                    WINNER: <span id="pool-winner-name" style="display:block;font-size:3rem;line-height:1.1;">---</span>
+                    <span id="pool-winner-kontingen" style="font-size:1rem;font-weight:700;letter-spacing:0.1em;opacity:0.7;">---</span>
+                </div>
+                <div class="shimmer-effect"></div>
+            </div>
+
+            <!-- Leaderboard Table — mirip detail pertandingan -->
+            <table style="width:100%;border-collapse:collapse;background:#ffffff;border-radius:1.5rem;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.4);">
+                <thead>
+                    <tr>
+                        <th style="background:#f8fafc;color:#64748b;padding:0.75rem 0.5rem;text-transform:uppercase;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;border:1px solid #e2e8f0;text-align:center;width:60px;">#</th>
+                        <th style="background:#f8fafc;color:#64748b;padding:0.75rem 1.5rem;text-transform:uppercase;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;border:1px solid #e2e8f0;text-align:left;">Atlet / Kontingen</th>
+                        <th id="pool-modal-th-waktu" style="background:#f8fafc;color:#64748b;padding:0.75rem 0.5rem;text-transform:uppercase;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;border:1px solid #e2e8f0;text-align:center;">Waktu</th>
+                        <th style="background:#6d28d9;color:white;padding:0.75rem 0.5rem;text-transform:uppercase;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;border:1px solid #6d28d9;text-align:center;">Median</th>
+                        <th style="background:#f8fafc;color:#ef4444;padding:0.75rem 0.5rem;text-transform:uppercase;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;border:1px solid #e2e8f0;text-align:center;">Hukuman</th>
+                        <th style="background:#1d4ed8;color:white;padding:0.75rem 1rem;text-transform:uppercase;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;border:1px solid #1d4ed8;text-align:center;">Total Skor</th>
+                        <th style="background:#f8fafc;color:#94a3b8;padding:0.75rem 0.5rem;text-transform:uppercase;font-size:0.6rem;font-weight:900;letter-spacing:0.1em;border:1px solid #e2e8f0;text-align:center;">SD</th>
+                    </tr>
+                </thead>
+                <tbody id="pool-leaderboard-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCaY8iCrMLVHXukVTih5ZPLzLj-2JoQKv0",
+            databaseURL: "https://tms-silat-sera-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "tms-silat-sera"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let activeJuryCount = 3;
+        let currentScores = { biru: null, merah: null };
+        let hasCelebrated = false;
+        let hideTimer = false;
+        let showStatsTable = false;
+
+        function applyTableVisibility() {
+            const tableContainer = document.getElementById('stats-table-container');
+            const timerEl = document.getElementById('timer');
+
+            if(showStatsTable) {
+                if(tableContainer) tableContainer.classList.remove('hide-element');
+                if(timerEl) timerEl.style.display = 'none'; // Sembunyikan waktu besar saat tabel muncul
+            } else {
+                if(tableContainer) tableContainer.classList.add('hide-element');
+                if(timerEl) timerEl.style.display = ''; // Kembalikan ke display normal
+            }
+        }
+
+        function applyTimerVisibility() {
+            const timerEl = document.getElementById('timer');
+            const statTimeEl = document.getElementById('stat-time');
+            const thStatTimeEl = document.getElementById('th-stat-time');
+            const sdCol1 = document.getElementById('sd-colspan1');
+            const sdCol2 = document.getElementById('sd-colspan2');
+            const versusWaktuRow = document.getElementById('versus-modal-row-waktu');
+            const poolThWaktu = document.getElementById('pool-modal-th-waktu');
+            if(hideTimer) {
+                timerEl.style.visibility = 'hidden';
+                if(statTimeEl) statTimeEl.style.display = 'none';
+                if(thStatTimeEl) thStatTimeEl.style.display = 'none';
+                if(sdCol1) sdCol1.setAttribute('colspan', '3');
+                if(sdCol2) sdCol2.setAttribute('colspan', '3');
+                if(versusWaktuRow) versusWaktuRow.style.display = 'none';
+                if(poolThWaktu) poolThWaktu.style.display = 'none';
+            } else {
+                timerEl.style.visibility = 'visible';
+                if(statTimeEl) statTimeEl.style.display = '';
+                if(thStatTimeEl) thStatTimeEl.style.display = '';
+                if(sdCol1) sdCol1.setAttribute('colspan', '4');
+                if(sdCol2) sdCol2.setAttribute('colspan', '4');
+                if(versusWaktuRow) versusWaktuRow.style.display = '';
+                if(poolThWaktu) poolThWaktu.style.display = '';
+            }
+        }
+
+        function renderJuries(count) {
+            const container = document.getElementById('jury-row');
+            container.innerHTML = "";
+            for(let i=1; i<=count; i++) {
+                container.innerHTML += `
+                    <div id="juri-card-${i}" class="juri-container">
+                        <div class="juri-label-box">Juri ${i}</div>
+                        <div id="val-juri-${i}" class="juri-score-box">0.00</div>
+                    </div>
+                `;
+            }
+        }
+
+        db.ref('seni_match/config').on('value', snap => {
+            const config = snap.val();
+            if(config && config.juryCount) {
+                activeJuryCount = config.juryCount;
+                renderJuries(activeJuryCount);
+            }
+            if(config && typeof config.hideTimer !== 'undefined') {
+                hideTimer = config.hideTimer;
+                applyTimerVisibility();
+            }
+            if(config && typeof config.showStatsTable !== 'undefined') {
+                showStatsTable = config.showStatsTable;
+                applyTableVisibility();
+            }
+            if(config && config.theme) {
+                document.body.className = config.theme === 'light' ? '' : `theme-${config.theme}`;
+            } else {
+                document.body.className = '';
+            }
+        });
+
+        // Listen to match mode - show/hide result modal columns
+        db.ref('seni_match/config').on('value', snap => {
+            const config = snap.val();
+            if(config) {
+                const isPool = config.matchMode === 'pool';
+                // Hide biru/merah columns in result modal for pool mode
+                document.querySelectorAll('.col-biru, .col-merah').forEach(el => {
+                    el.style.display = isPool ? 'none' : '';
+                });
+            }
+        });
+
+        // Listen Match History — hanya digunakan sebagai fallback jika system.scores belum ada
+        // Data utama tetap dari system.scores yang disimpan dewan saat konfirmasi
+        db.ref('seni_match/history').limitToLast(2).on('value', snap => {
+            const history = snap.val();
+            if(!history) return;
+            // Jangan update modal jika system sudah FINISHED (biarkan system.scores yang berkuasa)
+            db.ref('seni_match/system/phase').once('value', phaseSnap => {
+                const phase = phaseSnap.val();
+                if(phase === 'FINISHED') return; // sudah ada data dari dewan, skip
+                Object.values(history).forEach(match => {
+                    const sdt = (match.sudut || '').toLowerCase();
+                    if(sdt === 'biru' || sdt === 'merah') {
+                        currentScores[sdt] = match;
+                    }
+                });
+            });
+        });
+
+        // Listen Phase System (Trigger Modal)
+        db.ref('seni_match/system').on('value', snap => {
+            const system = snap.val();
+            const modal = document.getElementById('result-modal');
+            const poolModal = document.getElementById('pool-result-modal');
+
+            if(!system) return;
+
+            if(system.phase === 'FINISHED') {
+                // Gunakan data skor dari system.scores yang disimpan dewan (bukan hitung sendiri)
+                if(system.scores) {
+                    const biru = system.scores.biru || {};
+                    const merah = system.scores.merah || {};
+                    document.getElementById('pop-median-biru').innerText = biru.median || "0.000";
+                    document.getElementById('pop-time-biru').innerText = biru.time || "00:00";
+                    document.getElementById('pop-pen-biru').innerText = biru.penalty || "0.00";
+                    document.getElementById('pop-total-biru').innerText = biru.final_score || "0.000";
+                    document.getElementById('pop-sd-biru').innerText = biru.sd || "0.0000";
+
+                    document.getElementById('pop-median-merah').innerText = merah.median || "0.000";
+                    document.getElementById('pop-time-merah').innerText = merah.time || "00:00";
+                    document.getElementById('pop-pen-merah').innerText = merah.penalty || "0.00";
+                    document.getElementById('pop-total-merah').innerText = merah.final_score || "0.000";
+                    document.getElementById('pop-sd-merah').innerText = merah.sd || "0.0000";
+                }
+
+                // Tampilkan pemenang sesuai keputusan dewan (bukan hitung sendiri)
+                if(system.winner && !hasCelebrated) {
+                    const winner = system.winner.toUpperCase(); // BIRU atau MERAH
+                    const totalBiru = parseFloat((system.scores?.biru?.final_score) || 0);
+                    const totalMerah = parseFloat((system.scores?.merah?.final_score) || 0);
+                    const isTie = totalBiru === totalMerah;
+                    displayWinner(winner, isTie);
+                    hasCelebrated = true;
+                }
+                modal.classList.add('active');
+
+            } else if(system.phase === 'POOL_FINISHED') {
+                if(system.poolWinner) showPoolLeaderboard(system.poolWinner, system.poolLeaderboard);
+            } else {
+                modal.classList.remove('active');
+                if(poolModal) poolModal.classList.remove('active');
+                hasCelebrated = false;
+                document.getElementById('row-sd').classList.remove('tie-breaker-active');
+            }
+        });
+
+        function showPoolLeaderboard(winner, leaderboard) {
+            // Gunakan data leaderboard dari system (yang sudah disimpan dewan)
+            let athletes = [];
+            if(leaderboard && Array.isArray(leaderboard)) {
+                athletes = leaderboard;
+            } else {
+                // Fallback: baca dari history jika tidak ada di system
+                db.ref('seni_match/pool_config').once('value', poolSnap => {
+                    const poolCfg = poolSnap.val();
+                    const expectedTotal = poolCfg ? (poolCfg.totalAthletes || 0) : 0;
+                    db.ref('seni_match/history').once('value', snap => {
+                        const raw = snap.val();
+                        if(!raw) return;
+                        let aths = Object.values(raw)
+                            .filter(a => a.poolMode === true || a.sudut === 'POOL')
+                            .sort((a, b) => {
+                                const scoreDiff = parseFloat(b.final_score || 0) - parseFloat(a.final_score || 0);
+                                if(scoreDiff !== 0) return scoreDiff;
+                                return parseFloat(a.sd_score || 0) - parseFloat(b.sd_score || 0);
+                            })
+                            .map(a => ({
+                                nama:         a.nama || '-',
+                                kontingen:    a.kontingen || '-',
+                                time_display: a.time_display || '00:00',
+                                median_score: a.median_score || '0.000',
+                                penalty:      parseFloat(a.penalty || 0).toFixed(2),
+                                final_score:  parseFloat(a.final_score || 0).toFixed(3),
+                                sd_score:     a.sd_score || '0.0000'
+                            }));
+                        if(expectedTotal > 0) aths = aths.slice(0, expectedTotal);
+                        renderPoolLeaderboard(winner, aths);
+                    });
+                });
+                return;
+            }
+            renderPoolLeaderboard(winner, athletes);
+        }
+
+        function renderPoolLeaderboard(winner, athletes) {
+            // Sembunyikan kolom Waktu jika hideTimer
+            const thWaktu = document.getElementById('pool-modal-th-waktu');
+            if(thWaktu) thWaktu.style.display = hideTimer ? 'none' : '';
+
+            document.getElementById('pool-winner-name').innerText = winner.nama || '-';
+            document.getElementById('pool-winner-kontingen').innerText = winner.kontingen || '-';
+
+            const tbody = document.getElementById('pool-leaderboard-body');
+            const medals = ['🥇','🥈','🥉'];
+            tbody.innerHTML = athletes.map((a, i) => {
+                const isFirst = i === 0;
+                const medal = medals[i] || (i + 1);
+                return `
+                    <tr style="background:${isFirst ? '#fffbeb' : i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                        <td class="p-4 text-center text-2xl">${medal}</td>
+                        <td class="p-4 pl-6 text-left">
+                            <div style="font-weight:900;font-size:1.1rem;color:#1e293b;">${a.nama || '-'}</div>
+                            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-top:2px;">${a.kontingen || '-'}</div>
+                        </td>
+                        ${hideTimer ? '' : `<td class="p-4 text-center" style="font-family:monospace;font-weight:700;color:#475569;">${a.time_display || '00:00'}</td>`}
+                        <td class="p-4 text-center" style="font-weight:800;color:#6d28d9;">${parseFloat(a.median_score || a.median || 0).toFixed(3)}</td>
+                        <td class="p-4 text-center" style="font-weight:800;color:#ef4444;">${parseFloat(a.penalty || 0).toFixed(2)}</td>
+                        <td class="p-4 text-center" style="font-weight:900;font-size:1.7rem;color:${isFirst ? '#1d4ed8' : '#334155'};">${parseFloat(a.final_score || 0).toFixed(3)}</td>
+                        <td class="p-4 text-center" style="font-size:11px;font-family:monospace;color:#94a3b8;">${a.sd_score || '0.0000'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            if(!hasCelebrated) {
+                confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ['#eab308','#ffffff','#1d4ed8'] });
+                hasCelebrated = true;
+            }
+
+            document.getElementById('pool-result-modal').classList.add('active');
+        }
+
+        function processWinnerLogic() {
+            if (!currentScores.biru || !currentScores.merah || hasCelebrated) return;
+            
+            const totalBiru = parseFloat(currentScores.biru.final_score);
+            const totalMerah = parseFloat(currentScores.merah.final_score);
+            const sdBiru = parseFloat(currentScores.biru.sd_score);
+            const sdMerah = parseFloat(currentScores.merah.sd_score);
+
+            let winner = "";
+            let isTie = false;
+
+            if (totalBiru > totalMerah) winner = "BIRU";
+            else if (totalMerah > totalBiru) winner = "MERAH";
+            else {
+                isTie = true;
+                if (sdBiru < sdMerah) winner = "BIRU";
+                else if (sdMerah < sdBiru) winner = "MERAH";
+                else winner = "DRAW";
+            }
+            displayWinner(winner, isTie);
+            hasCelebrated = true;
+        }
+
+        function displayWinner(winner, isTie) {
+            const banner = document.getElementById('winner-banner');
+            const winnerName = document.getElementById('winner-name');
+            const sdRow = document.getElementById('row-sd');
+            winnerName.innerText = winner;
+            sdRow.classList.toggle('tie-breaker-active', isTie);
+
+            if (winner === 'BIRU') {
+                banner.className = "mb-8 p-8 rounded-3xl text-center uppercase font-black italic tracking-tighter text-5xl border-8 border-blue-600 bg-white text-blue-600 shadow-2xl animate-winner glow-blue w-full";
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#2563eb', '#ffffff'] });
+            } else if (winner === 'MERAH') {
+                banner.className = "mb-8 p-8 rounded-3xl text-center uppercase font-black italic tracking-tighter text-5xl border-8 border-red-600 bg-white text-red-600 shadow-2xl animate-winner glow-red w-full";
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#dc2626', '#ffffff'] });
+            }
+        }
+
+        // Live updates regular (Scoreboard utama)
+        db.ref('seni_match/active_athlete').on('value', snap => {
+            const data = snap.val();
+            if(data) {
+                document.getElementById('display-partai').innerText = "PARTAI " + (data.noUndian || "-");
+                document.getElementById('display-pool').innerText = "POOL " + (data.pool || "-");
+                document.getElementById('display-babak').innerText = data.babak || "PENYISIHAN";
+                document.getElementById('display-name').innerText = data.nama || "---";
+                document.getElementById('display-team').innerText = data.kontingen || "---";
+                
+                // Update stats table
+                document.getElementById('stat-median').innerText = data.median_display || "0.000";
+                document.getElementById('stat-penalty').innerText = parseFloat(data.penalty || 0).toFixed(2);
+                document.getElementById('stat-total').innerText = data.final_score || "0.000";
+                document.getElementById('stat-sd').innerText = data.sd_score || "0.0000";
+            }
+        });
+
+        db.ref('live_scores/seni').on('value', snap => {
+            const scores = snap.val() || {};
+            for(let i=1; i<=activeJuryCount; i++) {
+                const s = scores[`juri_seni_${i}`];
+                const el = document.getElementById(`val-juri-${i}`);
+                if(el) el.innerText = s?.total ? s.total.toFixed(2) : "9.90";
+            }
+        });
+
+        db.ref('seni_match/status_juri').on('value', snap => {
+            const statusJuri = snap.val() || {};
+            for(let i=1; i<=activeJuryCount; i++) {
+                const s = statusJuri[`juri_seni_${i}`];
+                const card = document.getElementById(`juri-card-${i}`);
+                if(card) s?.ready ? card.classList.add('is-ready') : card.classList.remove('is-ready');
+            }
+        });
+
+        db.ref('seni_match/timer').on('value', snap => {
+            if(snap.val()) {
+                const t = snap.val();
+                document.getElementById('timer').innerText = t;
+                const statTimeEl = document.getElementById('stat-time');
+                if(statTimeEl) statTimeEl.innerText = t;
+            }
+        });
+// 1. Matikan Klik Kanan
+document.addEventListener('contextmenu', event => event.preventDefault());
+
+// 2. Matikan Pintasan Keyboard (F12, Ctrl+Shift+I, Ctrl+U, Ctrl+Shift+J)
+document.addEventListener('keydown', e => {
+    if (
+        e.keyCode === 123 || // F12
+        (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+        (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+        (e.ctrlKey && e.keyCode === 85) // Ctrl+U
+    ) {
+        e.preventDefault();
+        return false;
+    }
+});
+    </script>
+</body>
+</html>
