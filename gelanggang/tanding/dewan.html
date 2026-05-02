@@ -136,6 +136,13 @@
         <!-- Hasil mayoritas -->
         <div class="var-majority" id="varMajority">Menunggu hasil voting...</div>
 
+        <!-- Manual Override -->
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <button class="btn-action" style="flex: 1; background: #0000FF; color: white; border: none;" onclick="setKeputusanVAR('Biru')">PILIH BIRU</button>
+            <button class="btn-action" style="flex: 1; background: #FF0000; color: white; border: none;" onclick="setKeputusanVAR('Merah')">PILIH MERAH</button>
+            <button class="btn-action" style="flex: 1; background: #555; color: white; border: none;" onclick="setKeputusanVAR('Invalid')">INVALID</button>
+        </div>
+
         <!-- Aksi -->
         <div class="var-actions">
             <button class="btn-action btn-var-cancel" onclick="batalVAR()"><iconify-icon inline icon="mdi:close-circle-outline" style="vertical-align: -0.125em; font-size: 1.2em;"></iconify-icon> BATAL</button>

@@ -10,13 +10,14 @@ let varAktif = false;
 let varJenis = null;       // 'Pelanggaran' | 'Jatuhan'
 let varVotes = {};         // { j1: 'Biru'|'Merah'|'Invalid', j2: ..., j3: ... }
 let varListener = null;
+let manualKeputusan = null;
 
 // --- THEME LOGIC ---
 const themes = ['standard', 'night', 'sporty', 'olympic'];
 let themeIdx = themes.indexOf(localStorage.getItem('dewan-theme') || 'standard');
 function cycleTheme() {
     themeIdx = (themeIdx + 1) % themes.length;
-    const newTheme = themes[themeIdxyyyyyyy];
+    const newTheme = themes[themeIdx];
     document.body.setAttribute('data-theme', newTheme);
     localStorage.setItem('dewan-theme', newTheme);
 }
@@ -156,6 +157,8 @@ function updateStatsAndButtons(wasitLogs, dewanLogs) {
             }
         }
     });
+
+    db.ref('stats').set(stats);
 }
 
 function inputDewan(sudut, aksi, poin) {
@@ -189,6 +192,7 @@ function bukaVAR(jenis) {
 
     varJenis = jenis;
     varVotes = {};
+    manualKeputusan = null;
 
     // Reset UI vote boxes
     [1, 2, 3].forEach(n => {
@@ -270,6 +274,11 @@ function renderVarVotes(votes) {
     const majorityEl = document.getElementById('varMajority');
     const confirmBtn = document.getElementById('btnVarConfirm');
 
+    if (manualKeputusan) {
+        // Jangan override text jika dewan sudah memilih secara manual
+        return;
+    }
+
     if (countBiru >= 2) {
         majorityEl.className = 'var-majority majority-biru';
         majorityEl.innerHTML = `MAYORITAS: BIRU (${countBiru} SUARA)`;
@@ -310,12 +319,28 @@ function getMajorityResult(votes) {
     return 'Invalid'; // termasuk 1-1-1
 }
 
+function setKeputusanVAR(hasil) {
+    if (!varAktif) return;
+    manualKeputusan = hasil;
+    
+    // Kirim langsung ke Firebase (berguna untuk scoreboard)
+    db.ref('var_aktif/keputusan').set(hasil);
+
+    // Update UI Dewan
+    const majorityEl = document.getElementById('varMajority');
+    majorityEl.className = `var-majority majority-${hasil.toLowerCase()}`;
+    majorityEl.innerHTML = `KEPUTUSAN DEWAN: ${hasil.toUpperCase()}`;
+    
+    document.getElementById('varModalBox').classList.remove('waiting');
+    document.getElementById('btnVarConfirm').classList.add('ready');
+}
+
 function konfirmasiVAR() {
-    const hasil = getMajorityResult(varVotes);
+    const hasil = manualKeputusan || getMajorityResult(varVotes);
 
     showCustomConfirm(
         `KONFIRMASI VAR ${varJenis.toUpperCase()}`,
-        `Hasil Mayoritas: ${hasil.toUpperCase()}\n\nSelesaikan VAR?`,
+        `Hasil Keputusan: ${hasil.toUpperCase()}\n\nSelesaikan VAR?`,
         function(confirmed) {
             if (confirmed) selesaiVAR(hasil);
         }
@@ -359,6 +384,7 @@ function tutupVAR() {
     varAktif = false;
     varJenis = null;
     varVotes = {};
+    manualKeputusan = null;
 
     document.getElementById('varModal').classList.remove('open');
     document.getElementById('varModalBox').classList.remove('waiting');
