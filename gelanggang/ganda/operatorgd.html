@@ -236,6 +236,28 @@
                         </div>
                     </button>
                 </div>
+
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl mt-4">
+                    <div>
+                        <span class="text-sm font-bold block">Sembunyikan Timer</span>
+                        <span class="text-[10px] text-slate-400 uppercase font-bold">Sembunyikan tampilan waktu di Scoreboard</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="hide-timer-check" class="sr-only peer" onchange="toggleHideTimer(this.checked)">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl mt-4">
+                    <div>
+                        <span class="text-sm font-bold block">Tampilkan Detail Skor</span>
+                        <span class="text-[10px] text-slate-400 uppercase font-bold">Tabel Median / Hukuman / SD / Total di Scoreboard</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="show-stats-check" class="sr-only peer" onchange="toggleShowStatsTable(this.checked)">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
             </div>
         </div>
     </div>
@@ -328,6 +350,32 @@
             if(config && config.matchMode) {
                 setMatchMode(config.matchMode);
             }
+        });
+
+        // =========== TOGGLE SEMBUNYIKAN TIMER ===========
+        function toggleHideTimer(checked) {
+            db.ref('ganda_match/config').update({ hideTimer: checked }).then(() => {
+                showToast(checked ? "Timer disembunyikan di Scoreboard" : "Timer ditampilkan di Scoreboard");
+            });
+        }
+
+        // Load saved hideTimer state on page load
+        db.ref('ganda_match/config').once('value', snap => {
+            const config = snap.val();
+            document.getElementById('hide-timer-check').checked = !!(config && config.hideTimer);
+        });
+
+        // =========== TOGGLE TAMPILKAN TABEL DETAIL SKOR ===========
+        function toggleShowStatsTable(checked) {
+            db.ref('ganda_match/config').update({ showStatsTable: checked }).then(() => {
+                showToast(checked ? "Tabel Detail Skor ditampilkan di Scoreboard" : "Tabel Detail Skor disembunyikan");
+            });
+        }
+
+        // Load saved showStatsTable state on page load
+        db.ref('ganda_match/config').once('value', snap => {
+            const config = snap.val();
+            document.getElementById('show-stats-check').checked = !!(config && config.showStatsTable);
         });
 
         function renderPoolAthletes() {
