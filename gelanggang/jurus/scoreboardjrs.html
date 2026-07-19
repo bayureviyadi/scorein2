@@ -140,7 +140,7 @@
                 <div id="display-partai" class="text-sm opacity-70">PARTAI -</div>
                 <div id="display-babak" class="text-2xl">PENYISIHAN</div>
             </div>
-            <div id="display-tipe" class="text-right opacity-60">REGU</div>
+            <div id="display-tipe" class="text-right opacity-60">TUNGGAL</div>
         </div>
 
         <div class="row-main gap-8">
@@ -568,6 +568,7 @@
                 document.getElementById('display-babak').innerText = data.babak || "PENYISIHAN";
                 document.getElementById('display-name').innerText = data.nama || "---";
                 document.getElementById('display-team').innerText = data.kontingen || "---";
+                document.getElementById('display-tipe').innerText = data.kategori || "TUNGGAL";
                 
                 // Update stats table
                 document.getElementById('stat-median').innerText = data.median_display || "0.000";
