@@ -111,6 +111,13 @@
         .total-score-badge { position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%); background: var(--text-main); color: var(--bg-card); padding: 1rem 3rem; border-radius: 12px; text-align: center; z-index: 10; }
         .hide-element { display: none !important; }
 
+        /* STATS TABLE STYLES */
+        .stats-table { border-collapse: collapse; text-align: center; background: var(--bg-card); color: var(--text-main); width: 380px; }
+        .stats-table th { background: var(--accent); color: white; border: 1px solid var(--accent); padding: 6px; text-transform: uppercase; font-weight: 900; font-size: 13px; }
+        .stats-table td { border: 1px solid var(--border); padding: 8px; font-weight: 900; font-size: 1.5rem; }
+        .stats-table .sd-header { background: var(--accent); color: white; border: 1px solid var(--accent); font-size: 10px; padding: 4px; text-transform: uppercase; font-weight: 900; }
+        .stats-table .sd-val { color: var(--accent); font-weight: 900; font-style: italic; }
+
         /* MODAL RESULT STYLES */
         #result-modal { position: fixed; inset: 0; z-index: 200; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; padding: 2rem; }
         #result-modal.active { display: flex; }
@@ -135,16 +142,44 @@
             <div id="display-tipe" class="text-right opacity-60">TUNGGAL</div>
         </div>
 
-        <div class="row-main">
-            <div>
+        <div class="row-main gap-8">
+            <div class="flex-1">
                 <div id="display-team" class="athlete-team">KONTINGEN ---</div>
                 <h1 id="display-name" class="athlete-name">---</h1>
             </div>
+
+            <div id="stats-table-container" class="shadow-xl rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 hide-element">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Median</th>
+                            <th>Hukuman</th>
+                            <th id="th-stat-time">Waktu</th>
+                            <td colspan="4" id="sd-colspan1" class="sd-header">Standard Deviation</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td id="stat-median">0.000</td>
+                            <td id="stat-penalty" style="color: #ef4444;">0.00</td>
+                            <td id="stat-time">00:00</td>
+                            <td colspan="4" id="sd-colspan2" class="sd-val text-xl py-1"><span id="stat-sd">0.0000</span></td>
+                        </tr>
+                        <tr>
+                            <th colspan="4" class="sd-header">Total</th>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="sd-val text-xl py-1" id="stat-total" style="color: var(--accent);">0.000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
             <div id="final-badge" class="total-score-badge hide-element">
                 <span class="text-xs uppercase font-bold opacity-70">Final Score</span>
                 <div id="final-score" class="text-7xl font-black">0.00</div>
             </div>
-            <div id="timer" class="timer-box">03:00</div>
+            <div id="timer" class="timer-box flex-shrink-0">03:00</div>
         </div>
         <div id="jury-row"></div>
     </div>
@@ -214,6 +249,41 @@
         let activeJuryCount = 3;
         let currentScores = { biru: null, merah: null };
         let hasCelebrated = false;
+        let hideTimer = false;
+        let showStatsTable = false;
+
+        function applyTableVisibility() {
+            const tableContainer = document.getElementById('stats-table-container');
+            const timerEl = document.getElementById('timer');
+            if(showStatsTable) {
+                if(tableContainer) tableContainer.classList.remove('hide-element');
+                if(timerEl) timerEl.style.display = 'none'; // Sembunyikan waktu besar saat tabel muncul
+            } else {
+                if(tableContainer) tableContainer.classList.add('hide-element');
+                if(timerEl) timerEl.style.display = '';
+            }
+        }
+
+        function applyTimerVisibility() {
+            const timerEl = document.getElementById('timer');
+            const statTimeEl = document.getElementById('stat-time');
+            const thStatTimeEl = document.getElementById('th-stat-time');
+            const sdCol1 = document.getElementById('sd-colspan1');
+            const sdCol2 = document.getElementById('sd-colspan2');
+            if(hideTimer) {
+                timerEl.style.visibility = 'hidden';
+                if(statTimeEl) statTimeEl.style.display = 'none';
+                if(thStatTimeEl) thStatTimeEl.style.display = 'none';
+                if(sdCol1) sdCol1.setAttribute('colspan', '3');
+                if(sdCol2) sdCol2.setAttribute('colspan', '3');
+            } else {
+                timerEl.style.visibility = 'visible';
+                if(statTimeEl) statTimeEl.style.display = '';
+                if(thStatTimeEl) thStatTimeEl.style.display = '';
+                if(sdCol1) sdCol1.setAttribute('colspan', '4');
+                if(sdCol2) sdCol2.setAttribute('colspan', '4');
+            }
+        }
 
         function renderJuries(count) {
             const container = document.getElementById('jury-row');
@@ -239,6 +309,14 @@
                 activeJuryCount = config.juryCount;
                 renderJuries(activeJuryCount);
             }
+
+            // Sembunyikan/tampilkan timer berdasarkan config Firebase (hideTimer)
+            hideTimer = !!(config && config.hideTimer);
+            applyTimerVisibility();
+
+            // Tampilkan/sembunyikan tabel detail (median/hukuman/waktu/SD/total)
+            showStatsTable = !!(config && config.showStatsTable);
+            applyTableVisibility();
         });
 
         // Listen to match mode - show/hide result modal columns
@@ -331,6 +409,13 @@
                 document.getElementById('display-babak').innerText = data.babak || "PENYISIHAN";
                 document.getElementById('display-name').innerText = data.nama || "---";
                 document.getElementById('display-team').innerText = data.kontingen || "---";
+                document.getElementById('display-tipe').innerText = data.kategori || "TUNGGAL";
+
+                // Update tabel detail (median, hukuman, total, SD) — data ditulis oleh dewangd.html
+                document.getElementById('stat-median').innerText = data.median_display || "0.000";
+                document.getElementById('stat-penalty').innerText = parseFloat(data.penalty || 0).toFixed(2);
+                document.getElementById('stat-total').innerText = data.final_score || "0.000";
+                document.getElementById('stat-sd').innerText = data.sd_score || "0.0000";
             }
         });
 
@@ -359,7 +444,12 @@
         });
 
         db.ref('ganda_match/timer').on('value', snap => {
-            if(snap.val()) document.getElementById('timer').innerText = snap.val();
+            if(snap.val()) {
+                const t = snap.val();
+                document.getElementById('timer').innerText = t;
+                const statTimeEl = document.getElementById('stat-time');
+                if(statTimeEl) statTimeEl.innerText = t;
+            }
         });
 // 1. Matikan Klik Kanan
 document.addEventListener('contextmenu', event => event.preventDefault());
